@@ -1,84 +1,103 @@
-// ====== CONFIG ======
-const WHATSAPP_NUMBER_E164 = "5567984431983"; // 55 + DDD + número (sem espaços)
-const WHATSAPP_TEXT = "Olá! Vim pelo site da Fattura+ e gostaria de solicitar um diagnóstico estratégico do faturamento hospitalar.";
+const WHATSAPP_NUMBER_E164 = "5567984431983";
+const WHATSAPP_TEXT = "Olá! Vim pelo site da Fattura+ e gostaria de solicitar um diagnóstico do faturamento hospitalar.";
 
-// ====== Helpers ======
 function buildWhatsAppLink() {
-  const text = encodeURIComponent(WHATSAPP_TEXT);
-  return `https://wa.me/${WHATSAPP_NUMBER_E164}?text=${text}`;
+  return `https://wa.me/${WHATSAPP_NUMBER_E164}?text=${encodeURIComponent(WHATSAPP_TEXT)}`;
 }
 
 function setWhatsAppLinks() {
   const link = buildWhatsAppLink();
-  const ids = ["ctaHero", "ctaMobile", "ctaBottom"];
-  ids.forEach(id => {
-    const el = document.getElementById(id);
-    if (el) el.href = link;
+
+  ["ctaHero", "ctaMobile", "ctaBottom"].forEach((id) => {
+    const element = document.getElementById(id);
+    if (element) element.href = link;
   });
 
   const meta = document.getElementById("metaWhats");
   if (meta) {
-    meta.style.cursor = "pointer";
+    meta.setAttribute("role", "link");
+    meta.setAttribute("tabindex", "0");
     meta.title = "Abrir WhatsApp";
-    meta.addEventListener("click", () => window.open(link, "_blank", "noopener"));
+
+    const openWhatsApp = () => window.open(link, "_blank", "noopener");
+    meta.addEventListener("click", openWhatsApp);
+    meta.addEventListener("keydown", (event) => {
+      if (event.key === "Enter" || event.key === " ") {
+        event.preventDefault();
+        openWhatsApp();
+      }
+    });
   }
 }
 
 function setYear() {
-  const y = document.getElementById("year");
-  if (y) y.textContent = String(new Date().getFullYear());
+  const year = document.getElementById("year");
+  if (year) year.textContent = new Date().getFullYear();
 }
 
-// ====== Mobile drawer ======
 function setupDrawer() {
-  const burger = document.getElementById("burger");
+  const button = document.getElementById("burger");
   const drawer = document.getElementById("drawer");
-  const closeBtn = document.getElementById("drawerClose");
-  const links = drawer?.querySelectorAll(".drawer__link") || [];
+  const closeButton = document.getElementById("drawerClose");
+  const links = drawer?.querySelectorAll(".drawer-link") ?? [];
+
+  if (!button || !drawer || !closeButton) return;
 
   function openDrawer() {
-    drawer.style.display = "block";
+    drawer.classList.add("is-open");
     drawer.setAttribute("aria-hidden", "false");
-    burger.setAttribute("aria-expanded", "true");
-    document.body.style.overflow = "hidden";
+    button.setAttribute("aria-expanded", "true");
+    document.body.classList.add("menu-open");
+    closeButton.focus();
   }
 
   function closeDrawer() {
-    drawer.style.display = "none";
+    drawer.classList.remove("is-open");
     drawer.setAttribute("aria-hidden", "true");
-    burger.setAttribute("aria-expanded", "false");
-    document.body.style.overflow = "";
+    button.setAttribute("aria-expanded", "false");
+    document.body.classList.remove("menu-open");
   }
 
-  burger?.addEventListener("click", () => {
-    const isOpen = drawer.style.display === "block";
-    isOpen ? closeDrawer() : openDrawer();
+  button.addEventListener("click", openDrawer);
+  closeButton.addEventListener("click", closeDrawer);
+  links.forEach((link) => link.addEventListener("click", closeDrawer));
+
+  drawer.addEventListener("click", (event) => {
+    if (event.target === drawer) closeDrawer();
   });
 
-  closeBtn?.addEventListener("click", closeDrawer);
-
-  drawer?.addEventListener("click", (e) => {
-    if (e.target === drawer) closeDrawer();
+  document.addEventListener("keydown", (event) => {
+    if (event.key === "Escape" && drawer.classList.contains("is-open")) {
+      closeDrawer();
+      button.focus();
+    }
   });
-
-  links.forEach(a => a.addEventListener("click", closeDrawer));
 }
 
-// ====== Scroll reveal (Base44-like) ======
 function setupScrollReveal() {
-  const els = document.querySelectorAll(".reveal");
-  if (!els.length) return;
+  const elements = document.querySelectorAll(".reveal");
+  const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 
-  const io = new IntersectionObserver((entries) => {
-    entries.forEach((entry) => {
-      if (entry.isIntersecting) entry.target.classList.add("is-visible");
-    });
-  }, { threshold: 0.12 });
+  if (reduceMotion || !("IntersectionObserver" in window)) {
+    elements.forEach((element) => element.classList.add("is-visible"));
+    return;
+  }
 
-  els.forEach(el => io.observe(el));
+  const observer = new IntersectionObserver(
+    (entries) => {
+      entries.forEach((entry) => {
+        if (entry.isIntersecting) {
+          entry.target.classList.add("is-visible");
+          observer.unobserve(entry.target);
+        }
+      });
+    },
+    { threshold: 0.12 }
+  );
+
+  elements.forEach((element) => observer.observe(element));
 }
 
-// ====== Init ======
 setWhatsAppLinks();
 setYear();
 setupDrawer();
